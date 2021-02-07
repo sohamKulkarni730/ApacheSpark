@@ -25,6 +25,8 @@ public class WordCount {
 
         for (Map.Entry<String, Long> entry : wordCounts.entrySet()) {
             System.out.println(entry.getKey() + " : " + entry.getValue());
+             
+
         }
     }
 }

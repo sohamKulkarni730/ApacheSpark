@@ -1,5 +1,9 @@
 package com.sparkTutorial.rdd.nasaApacheWebLogs;
 
+import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.JavaRDD;
+
 public class SameHostsProblem {
 
     public static void main(String[] args) throws Exception {
@@ -19,5 +23,28 @@ public class SameHostsProblem {
 
            Make sure the head lines are removed in the resulting RDD.
          */
+
+        SparkConf conf = new SparkConf().setAppName("SameHostProblem").setMaster("local[2]") ;
+
+        SparkContext sp = new SparkContext(conf) ;
+
+        JavaRDD<String> julyFile = sp.textFile("in/nasa_19950701.tsv" ,1).toJavaRDD();
+        JavaRDD<String> augFile = sp.textFile("in/nasa_19950801.tsv",1).toJavaRDD();
+
+
+
+        julyFile = julyFile.map(line -> line.split("\t")[0]) ;
+        augFile = augFile.map(line -> line.split("\t")[0]) ;
+
+        JavaRDD<String> aggregated = julyFile.intersection(augFile) ;
+
+        JavaRDD<String> cleanLogLines = aggregated.filter(line -> isNotHeader(line));
+
+        aggregated.saveAsTextFile("out/finalOutput.tsv");
+
+
+    }
+    private static boolean isNotHeader(String line) {
+        return !(line.startsWith("host") || line.contains("bytes"));
     }
 }

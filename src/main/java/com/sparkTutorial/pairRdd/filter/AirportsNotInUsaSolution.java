@@ -18,7 +18,7 @@ public class AirportsNotInUsaSolution {
 
         JavaRDD<String> airportsRDD = sc.textFile("in/airports.text");
 
-        JavaPairRDD<String, String> airportPairRDD = airportsRDD.mapToPair(getAirportNameAndCountryNamePair());
+        JavaPairRDD<String, String> airportPairRDD = airportsRDD.mapToPair( getAirportNameAndCountryNamePair());
 
         JavaPairRDD<String, String> airportsNotInUSA = airportPairRDD.filter(keyValue -> !keyValue._2().equals("\"United States\""));
 

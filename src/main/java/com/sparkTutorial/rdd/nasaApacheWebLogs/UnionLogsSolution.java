@@ -8,6 +8,8 @@ public class UnionLogsSolution {
 
     public static void main(String[] args) throws Exception {
 
+       // System.setProperty("hadoop.home.dir", "C:\\Java_WorkSpace_JB\\winutils-hdoop");
+
         SparkConf conf = new SparkConf().setAppName("unionLogs").setMaster("local[*]");
 
         JavaSparkContext sc = new JavaSparkContext(conf);
@@ -25,6 +27,6 @@ public class UnionLogsSolution {
     }
 
     private static boolean isNotHeader(String line) {
-        return !(line.startsWith("host") && line.contains("bytes"));
+        return !(line.startsWith("host") || line.contains("bytes"));
     }
 }
