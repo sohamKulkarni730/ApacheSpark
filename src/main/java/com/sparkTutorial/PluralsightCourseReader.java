@@ -6,6 +6,7 @@ import org.apache.spark.SparkConf;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
 import java.io.IOException;
@@ -25,9 +26,7 @@ public class PluralsightCourseReader {
 
         JavaSparkContext spark = new JavaSparkContext(conf);
 
-        JavaRDD<String> courseLines = spark.textFile("in/Courses.csv");
-
-
+        JavaRDD<String> courseLines = spark.textFile("in/Courses.csv",2);
 
 //creating a stopword DISTRIBUTED corpus
 
@@ -84,8 +83,8 @@ public class PluralsightCourseReader {
 */
 
 //fluent API version , very compact but difficult to read --  performance compared - does not affect the performance
-
-        courseLines.flatMap( line-> Arrays.stream(line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)")[4]
+              spark.textFile("in/Courses.csv")
+                   .flatMap( line-> Arrays.stream(line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)")[4]
                                           .split("\\s|\\-"))
                                           .iterator())
                    .filter( key_word -> !stopwords_set.contains(key_word))
@@ -96,6 +95,12 @@ public class PluralsightCourseReader {
                    .sortByKey(false)
                    .take(50)
                    .forEach(System.out::println);
+
+
+      /*  Scanner scan = new Scanner(System.in);
+        scan.nextLine();
+*/
+
     }
 
 }
