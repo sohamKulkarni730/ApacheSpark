@@ -1,4 +1,4 @@
-package com.sparkTutorial;
+package com.soham.sparkPractice;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
