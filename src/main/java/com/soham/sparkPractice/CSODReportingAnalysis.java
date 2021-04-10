@@ -1,6 +1,5 @@
 package com.soham.sparkPractice;
 
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
@@ -16,7 +15,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -25,8 +23,8 @@ import static org.apache.spark.sql.functions.* ;
 // Progress
 /*
 14/2/2021  - Spark able to read JSON and schema correctly - No Analytics
-14/2/2021  - Ran dome EDA (Exploratory data analysis) found data tobe too messy to get anything from it .
-             Will focus on a well pre-processed data first and come back to this data set for any patter analysis
+14/2/2021  - Ran dome EDA (Exploratory data analysis) found data to be too messy to get anything from it .
+             Will focus on a well pre-processed data first and come back to this data set for any pattern analysis
 
 */
 
@@ -86,16 +84,14 @@ public class CSODReportingAnalysis {
         SparkSession spark = SparkSession.builder().config(conf).getOrCreate();
 
         Dataset<Row> training_records1 = spark.read().option("multiline", "true")
-                .json("C:\\Java_WorkSpace_JB\\Spark\\sparkTutorial\\in\\csod_reporting_table_views\\training_view_formatted.json");
+                                              .json("C:\\Java_WorkSpace_JB\\Spark\\sparkTutorial\\in\\" +
+                                                      "csod_reporting_table_views\\training_view_formatted.json");
 // Step 1 :: Print schema and check whether dta is being read properly .
         //training_records1.printSchema();
 
         String[] columns = training_records1.columns() ;
 
         training_records1.describe();
-
-
-
 // Always close the session ... A must
         spark.close();
     }

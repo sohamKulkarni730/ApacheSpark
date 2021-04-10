@@ -18,7 +18,7 @@ public class WordCount {
         SparkConf conf = new SparkConf().setAppName("wordCounts").setMaster("local[3]");
         JavaSparkContext sc = new JavaSparkContext(conf);
 
-        JavaRDD<String> lines = sc.textFile("in/word_count.text");
+        JavaRDD<String> lines = sc.textFile("C:\\Java_WorkSpace_JB\\Spark\\whatsapp_chat\\in\\CSODReportingAnalysis.java");
         JavaRDD<String> words = lines.flatMap(line -> Arrays.asList(line.split(" ")).iterator());
 
         Map<String, Long> wordCounts = words.countByValue();

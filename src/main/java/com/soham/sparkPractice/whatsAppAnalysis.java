@@ -45,18 +45,19 @@ public class whatsAppAnalysis {
 
         String base_directory = "C:\\Java_WorkSpace_JB\\Spark\\whatsapp_chat" ;
 
-        String chat_name = args[0] ;
+
+        String chat_name = "CSODReportingAnalysis.java" ;
 
         System.out.println(base_directory +"\\in\\"+chat_name);
 
+        //this can be set as broadcast variable
         Set<String> stopwords = get_StopWords_set() ;
 
 
         JavaRDD<Tuple4> chats = spark_ctx.textFile(base_directory +"\\in\\"+chat_name)
                 .map(v -> chat_regex_ListString(v))
                 .filter(chat -> chat.size() != 0)
-                .map(string ->
-                        new Tuple4<String, String, String, String>(string.get(0),
+                .map(string -> new Tuple4<String, String, String, String>(string.get(0),
                                 string.get(1),
                                 string.get(2),
                                 string.get(3).replaceAll("[^a-zA-Z0-9\\s]","").toLowerCase())

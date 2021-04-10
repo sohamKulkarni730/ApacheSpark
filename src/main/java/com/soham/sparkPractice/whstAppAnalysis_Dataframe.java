@@ -176,7 +176,9 @@ public class whstAppAnalysis_Dataframe
                 .agg(sum("words"))
                 .drop(col(""))
                 .sort(col("month").cast(DataTypes.DateType))
-                .na().drop();*/
+                .na().drop();
+
+      */
 
         Dataset<Row> chat5 = chat.withColumn( "month_year", date_format(col("Date"), "MM/yyyy"))
                 .groupBy(col("month_year"))
@@ -189,6 +191,8 @@ public class whstAppAnalysis_Dataframe
         chat5.show();
        /* Scanner in = new Scanner(System.in) ;
         in.nextLine() ;*/
+
+
     }
 
     public static List<String> chat_regex_ListString(String input_msg) {
