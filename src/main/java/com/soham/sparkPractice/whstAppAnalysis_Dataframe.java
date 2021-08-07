@@ -3,19 +3,28 @@ package com.soham.sparkPractice;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.broadcast.Broadcast;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import scala.Tuple2;
+import scala.Tuple4;
+import scala.Tuple5;
+import scala.reflect.ClassTag;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.spark.sql.functions.*;
 
@@ -39,7 +48,22 @@ public class whstAppAnalysis_Dataframe
 
         SparkSession spark_ss = SparkSession.builder().config(conf).getOrCreate();
 
-        spark_ss.udf().register("message_to_words", (String Message)->  Message.split(" ").length, DataTypes.IntegerType);
+        spark_ss.conf().set("spark.sql.shuffle.partitions", 3);
+
+        JavaSparkContext spark_cxt = JavaSparkContext.fromSparkContext(spark_ss.sparkContext()) ;
+
+        //Arrays.stream(spark_cxt.getConf().getAll()).forEach(v -> System.out.println(v._1 + " "+  v._2));
+
+        Broadcast<Set<String>> stopwords_set = spark_cxt.broadcast(get_StopWords_set()) ;
+
+        spark_ss.udf().register("wordCount_in_message_withoutStopWords", (String Message)->  Message.split(" ").length
+                                                                                      ,DataTypes.IntegerType);
+
+        spark_ss.udf().register("wordCount_message_withStopWords", (String Message)->  Arrays.stream(Message.split(" "))
+                        .filter(v -> !stopwords_set.value().contains(v))
+                        .collect(Collectors.toList())
+                        .size()
+                ,DataTypes.IntegerType);
 
         String base_directory = "C:\\Java_WorkSpace_JB\\Spark\\whatsapp_chat" ;
 
@@ -54,8 +78,12 @@ public class whstAppAnalysis_Dataframe
                         regexp_extract(col("value"), "(?<=\\-\\s)(.*?)(?=\\:)",0 ).alias("Actor"),
                         regexp_extract(col("value"), "(?<=\\:\\s)(.*)",0 ).alias("Message")
                 )
-                .withColumn("words", callUDF("message_to_words", col("Message")))
+                .withColumn("words_withStopWords", callUDF("wordCount_message_withStopWords", col("Message")))
+                .withColumn("words_withoutStopWords", callUDF("wordCount_in_message_withoutStopWords", col("Message")))
                 ;
+
+
+
 
               /*+----------+---------+--------------+--------------------+-----+
                 |      Date|timestamp|         Actor|             Message|words|
@@ -69,8 +97,25 @@ public class whstAppAnalysis_Dataframe
               */
 
         //chat.cache();
+//reduceBykey trial
+        SQLContext sqlContext = spark_ss.sqlContext();
 
-        // chat.groupBy(col("Actor")).count().show();
+        JavaPairRDD chat_a = chat.javaRDD().mapToPair(row -> new Tuple2<>(row.getString(2),  1L ))
+                                           .reduceByKey((a,b) -> a+b) ;
+
+        chat_a.take(5).stream().forEach(System.out::println);
+
+        JavaRDD chat_b = JavaPairRDD.toRDD(chat_a).toJavaRDD();
+
+        chat_b.take(5).stream().forEach(System.out::println);
+
+
+
+        /*Dataset<Row> chat_a = sqlContext.createDataFrame(JavaPairRDD.toRDD(chat.javaRDD().mapToPair(row -> new Tuple2<>(row.getString(2),  1L ))
+                .reduceByKey((a,b) -> a+b)) , Encoders.tuple(Encoders.STRING(),Encoders.LONG())) ;
+*/
+
+         chat.groupBy(col("Actor")).count().show();
                /* +--------------+-----+
                 |         Actor|count|
                 +--------------+-----+
@@ -79,7 +124,7 @@ public class whstAppAnalysis_Dataframe
                 |              |  205|
                 +--------------+-----+*/
 
-        // chat.groupBy(col("Date"), col("Actor")).count().sort(to_date(col("Date"), "dd/MM/yyyy")).show();
+         chat.groupBy(col("Date"), col("Actor")).count().sort(to_date(col("Date"), "dd/MM/yyyy")).show();
                /* +----------+--------------+-----+
                 |      Date|         Actor|count|
                 +----------+--------------+-----+
@@ -90,7 +135,7 @@ public class whstAppAnalysis_Dataframe
                 |05/11/2019|  Amruta Bonde|   27|*/
 
 //PIVOT 1::
-        // chat.groupBy(col("Date")).pivot( col("Actor")).count().sort(to_date(col("Date"), "dd/MM/yyyy")).show();
+         chat.groupBy(col("Date")).pivot( col("Actor")).count().sort(to_date(col("Date"), "dd/MM/yyyy")).show();
                /*+----------+----+------------+--------------+
                  |      Date|    |Amruta Bonde|Soham Kulkarni|
                  +----------+----+------------+--------------+
@@ -111,7 +156,7 @@ public class whstAppAnalysis_Dataframe
                 .map(m -> m.get(0).toString())
                 .collect(Collectors.toList());
 
-       /* Dataset<Row> chat1 = chat.select(col("words"),col("Date"),col("Actor"))
+        Dataset<Row> chat1 = chat.select(col("words_withStopWords"),col("Date"),col("Actor"))
                 .groupBy(col("Date"))
                 .pivot(col("Actor"), actors_values)
                 .count()
@@ -120,15 +165,15 @@ public class whstAppAnalysis_Dataframe
                 .drop(col(""))
                 .na().drop();
 
-        chat1.show();*/
+        chat1.show();
 // Multiple aggregations ::
-        /*chat1.groupBy(col("Day")).agg(sum("Amruta Bonde").alias("Amruta Bonde"),
+        chat1.groupBy(col("Day")).agg(sum("Amruta Bonde").alias("Amruta Bonde"),
                                                sum("Soham Kulkarni").alias("Soham Kulkarni"),
                                                count("Date").alias("Days")
                                                )
                                           .show();
-*/
-           /* +---+------------+--------------+----+
+           /*
+           +---+------------+--------------+----+
             |Day|Amruta Bonde|Soham Kulkarni|Days|
             +---+------------+--------------+----+
             |Sun|        1482|          1360|  63|
@@ -142,13 +187,13 @@ public class whstAppAnalysis_Dataframe
 
 
 //WORDS ::CHAT2
-        /*Dataset<Row> chat2 = chat.select(col("words"),col("Date"),col("Actor"))
+        Dataset<Row> chat2 = chat.select(col("words_withStopWords"),col("Date"),col("Actor"))
                 .groupBy(col("Date"),col("Actor"))
-                .agg(sum("words").alias("words"))
+                .agg(sum("words_withStopWords").alias("words"))
                 .sort(col("Date"))
                 .na().drop();
 
-        chat2.show();*/
+        chat2.show();
 
                /* +----------+--------------+----------+
                 |      Date|         Actor|sum(words)|
@@ -162,40 +207,43 @@ public class whstAppAnalysis_Dataframe
 
 //WORDS ::CHAT3
 
-      /*  Dataset<Row> chat3 = chat.withColumn( "Day", date_format(col("Date"), "E"))
+        Dataset<Row> chat3 = chat.withColumn( "Day", date_format(col("Date"), "E"))
                 .groupBy(col("Day"))
-                .pivot(col("Actor"))
-                .agg(sum("words"))
+                //providing values in label save time as spark does not have to run a unique query to receive all possible value
+                .pivot(col("Actor"), Arrays.asList(new String[]{"Soham Kulkarni","Amruta Bonde"}))
+                .agg(sum("words_withoutStopWords"))
                 .drop(col(""))
                 .sort(col("Day").cast(DataTypes.DateType))
                 .na().drop();
+        chat3.show();
 
         Dataset<Row> chat4 = chat.withColumn( "month", date_format(col("Date"), "MMMM"))
                 .groupBy(col("month"))
-                .pivot(col("Actor"))
-                .agg(sum("words"))
+                .pivot(col("Actor"), Arrays.asList(new String[]{"Soham Kulkarni","Amruta Bonde"}))
+                .agg(sum("words_withoutStopWords"))
                 .drop(col(""))
                 .sort(col("month").cast(DataTypes.DateType))
                 .na().drop();
-
-      */
+        chat4.show();
 
         Dataset<Row> chat5 = chat.withColumn( "month_year", date_format(col("Date"), "MM/yyyy"))
                 .groupBy(col("month_year"))
-                .pivot(col("Actor"))
-                .agg(sum("words"))
+                .pivot(col("Actor"), Arrays.asList(new String[]{"Soham Kulkarni","Amruta Bonde"}))
+                .agg(sum("words_withoutStopWords"))
                 .drop(col(""))
                 .sort(col("month_year"))
                 .na().drop();
+         chat5.show();
 
-        chat5.show();
-       /* Scanner in = new Scanner(System.in) ;
+
+        System.out.println("##############################\n\n\n\t\ttime to execute :"+ (System.currentTimeMillis() - t) +"\n\n\n##############################");
+              /*Scanner in = new Scanner(System.in) ;
         in.nextLine() ;*/
-
 
     }
 
-    public static List<String> chat_regex_ListString(String input_msg) {
+    public static List<String> chat_regex_ListString(String input_msg)
+    {
         // Date (?<=^)(.*?)(?=\,)
         Pattern date = Pattern.compile("^[0-9\\/]*");
         // timestamp (?<=,\s)(.*?)(?=\s\-)
@@ -221,5 +269,20 @@ public class whstAppAnalysis_Dataframe
 
         return result;
 
+    }
+
+    public static Set<String> get_StopWords_set ()
+    {
+        Stream<String> stopwords = null;
+        try {
+            stopwords = Files.lines(Paths.get("C:\\Java_WorkSpace_JB\\Spark\\sparkTutorial\\in\\stopwords_en.txt"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        List<String> stopwords_list = stopwords.flatMap(lines -> Arrays.stream(lines.split("\n"))).collect(Collectors.toList());
+        Set<String> stopwords_set = new HashSet<String>();
+        stopwords_set.addAll(stopwords_list);
+
+        return stopwords_set ;
     }
 }

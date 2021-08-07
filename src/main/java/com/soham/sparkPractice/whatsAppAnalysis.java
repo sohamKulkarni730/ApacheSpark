@@ -8,6 +8,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.*;
 import scala.Tuple2;
 import scala.Tuple4;
@@ -46,12 +47,14 @@ public class whatsAppAnalysis {
         String base_directory = "C:\\Java_WorkSpace_JB\\Spark\\whatsapp_chat" ;
 
 
-        String chat_name = "CSODReportingAnalysis.java" ;
+        String chat_name = "WhatsApp_Chat_AB_SK.txt" ;
 
         System.out.println(base_directory +"\\in\\"+chat_name);
 
         //this can be set as broadcast variable
-        Set<String> stopwords = get_StopWords_set() ;
+        Broadcast<Set<String>> stopwords_set = spark_ctx.broadcast(get_StopWords_set()) ;
+
+        //Set<String> stopwords = get_StopWords_set() ;
 
 
         JavaRDD<Tuple4> chats = spark_ctx.textFile(base_directory +"\\in\\"+chat_name)
@@ -63,11 +66,16 @@ public class whatsAppAnalysis {
                                 string.get(3).replaceAll("[^a-zA-Z0-9\\s]","").toLowerCase())
 
                 );
+
+        chats.cache();
+// without Stopwords broadcast
+        /*Long start = System.currentTimeMillis() ;
         List<String> word_pair_count = chats.flatMap(v -> IntStream.range(1, v._4().toString().split(" ").length)
                                                                     //v._4() would always return Object and not string withing mapToObject method
                                                                    .mapToObj(i -> v._4().toString().split(" ")[i-1]
                                                                                         .concat(" " + v._4().toString().split(" ")[i]))
                                                                    .collect(Collectors.toList()).stream().iterator())
+                .filter( m -> !stopwords.contains(m))
                 .mapToPair(v1 -> new Tuple2<String, Long>(v1, 1L))
                 .reduceByKey((v2, v3) -> v2 + v3)
                 .mapToPair(v4 -> new Tuple2<Long, String>(v4._2(), v4._1()))
@@ -75,6 +83,28 @@ public class whatsAppAnalysis {
                 .sortByKey(false)
                 .map(v5 -> v5._2().concat("," + v5._1().toString()))
                 .collect();
+
+        System.out.println("Time required to execute :: " + (System.currentTimeMillis()-start));*/
+
+
+// with Stopwords broadcast
+         Long start = System.currentTimeMillis() ;
+           List<String> word_pair_count = chats.flatMap(v -> IntStream.range(1, v._4().toString().split(" ").length)
+                //v._4() would always return Object and not string withing mapToObject method
+                .mapToObj(i -> v._4().toString().split(" ")[i-1]
+                        .concat(" " + v._4().toString().split(" ")[i]))
+                .collect(Collectors.toList()).stream().iterator())
+                .filter( m -> !stopwords_set.getValue().contains(m))
+                .mapToPair(v1 -> new Tuple2<String, Long>(v1, 1L))
+                .reduceByKey((v2, v3) -> v2 + v3)
+                .mapToPair(v4 -> new Tuple2<Long, String>(v4._2(), v4._1()))
+                .filter(w2 -> w2._1()>1L)
+                .sortByKey(false)
+                .map(v5 -> v5._2().concat("," + v5._1().toString()))
+                .collect();
+
+
+                 System.out.println("Time required to execute with Broadcast:: " + (System.currentTimeMillis()-start));
 
 
         Path out = Paths.get(base_directory+"/out/word_count/"+chat_name+"_word_count.txt");
@@ -99,6 +129,7 @@ public class whatsAppAnalysis {
         System.out.println(System.currentTimeMillis() - t);
 
 
+       
 
     }
 

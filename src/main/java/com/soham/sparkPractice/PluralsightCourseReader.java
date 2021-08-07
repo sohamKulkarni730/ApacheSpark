@@ -28,6 +28,8 @@ public class PluralsightCourseReader {
 
         JavaRDD<String> courseLines = spark.textFile("in/Courses.csv",2);
 
+     
+
 //creating a stopword DISTRIBUTED corpus
 
         /*
