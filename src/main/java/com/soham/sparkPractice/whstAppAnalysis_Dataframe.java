@@ -54,7 +54,7 @@ public class whstAppAnalysis_Dataframe
 
         //Arrays.stream(spark_cxt.getConf().getAll()).forEach(v -> System.out.println(v._1 + " "+  v._2));
 
-        Broadcast<Set<String>> stopwords_set = spark_cxt.broadcast(get_StopWords_set()) ;
+        Broadcast<Set<String>> stopwords_set = spark_cxt.broadcast(get_StopWords_set(args[1])) ;
 
         spark_ss.udf().register("wordCount_in_message_withoutStopWords", (String Message)->  Message.split(" ").length
                                                                                       ,DataTypes.IntegerType);
@@ -65,13 +65,14 @@ public class whstAppAnalysis_Dataframe
                         .size()
                 ,DataTypes.IntegerType);
 
-        String base_directory = "C:\\Java_WorkSpace_JB\\Spark\\whatsapp_chat" ;
+       // String base_directory = "C:\\Java_WorkSpace_JB\\Spark\\whatsapp_chat" ;
+       //String base_directory = args[0] ;
 
-        String chat_name = "WhatsApp_Chat_AB_SK.txt" ;
+      //  String chat_name = "WhatsApp_Chat_AB_SK.txt" ;
 
-        System.out.println(base_directory +"\\in\\"+chat_name);
+       // System.out.println("hdfs://""+chat_name);
 
-        Dataset<Row> chat = spark_ss.read().textFile(base_directory +"\\in\\"+chat_name)
+        Dataset<Row> chat = spark_ss.read().textFile(args[0])
                 //.where(col("value").isNotNull())
                 .select( to_date(regexp_extract(col("value"), "^[0-9\\/]*",0 ), "dd/MM/yyyy").alias("Date"),
                         regexp_extract(col("value"), "(?<=,\\s)(.*?)(?=\\s-)",0 ).alias("timestamp"),
@@ -240,6 +241,8 @@ public class whstAppAnalysis_Dataframe
               /*Scanner in = new Scanner(System.in) ;
         in.nextLine() ;*/
 
+              chat5.coalesce(1).write().csv(args[2]+"output.csv");
+
     }
 
     public static List<String> chat_regex_ListString(String input_msg)
@@ -271,11 +274,11 @@ public class whstAppAnalysis_Dataframe
 
     }
 
-    public static Set<String> get_StopWords_set ()
+    public static Set<String> get_StopWords_set (String Path)
     {
         Stream<String> stopwords = null;
         try {
-            stopwords = Files.lines(Paths.get("C:\\Java_WorkSpace_JB\\Spark\\sparkTutorial\\in\\stopwords_en.txt"));
+            stopwords = Files.lines(Paths.get(Path));
         } catch (IOException e) {
             e.printStackTrace();
         }
