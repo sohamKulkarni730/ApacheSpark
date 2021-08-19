@@ -1,0 +1,39 @@
+<application>
+  <component name="GitRememberedInputs">
+    <option name="visitedUrls">
+      <list>
+        <UrlAndUserName>
+          <option name="url" value="http://github.com" />
+          <option name="userName" value="sohamkulkarni730@hotmail.com" />
+        </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="https://www.javaspecialists.eu/git/safari/dpc5-0521.git" />
+          <option name="userName" value="" />
+        </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="http://www.javaspecialists.eu" />
+          <option name="userName" value="safari0025" />
+        </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="https://www.javaspecialists.eu/git/safari/masteringthreads-0025.git" />
+          <option name="userName" value="" />
+        </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="https://github.com/sohamKulkarni730/ApacheSpark.git" />
+          <option name="userName" value="" />
+        </UrlAndUserName>
+      </list>
+    </option>
+    <option name="cloneParentDir" value="C:\Java_WorkSpace_JB\Spark" />
+  </component>
+  <component name="Vcs.Log.App.Settings">
+    <option name="COLUMN_ORDER">
+      <list>
+        <option value="0" />
+        <option value="1" />
+        <option value="2" />
+        <option value="3" />
+      </list>
+    </option>
+  </component>
+</application>
