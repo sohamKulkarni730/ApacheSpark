@@ -22,9 +22,13 @@
           <option name="url" value="https://github.com/sohamKulkarni730/ApacheSpark.git" />
           <option name="userName" value="" />
         </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="https://safari5443:9TjmGWf_@javaspecialists.eu/git/safari/data-structures-in-java-5443.git" />
+          <option name="userName" value="" />
+        </UrlAndUserName>
       </list>
     </option>
-    <option name="cloneParentDir" value="C:\Java_WorkSpace_JB\Spark" />
+    <option name="cloneParentDir" value="C:\Java_WorkSpace_JB" />
   </component>
   <component name="Vcs.Log.App.Settings">
     <option name="COLUMN_ORDER">
